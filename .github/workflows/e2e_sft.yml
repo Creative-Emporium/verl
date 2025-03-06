@@ -6,22 +6,27 @@ on:
   push:
     branches:
       - main
+      - v0.2.x
     paths:
       - "**/*.py"
       - .github/workflows/e2e_sft.yml
   pull_request:
     branches:
       - main
+      - v0.2.x
     paths:
       - "**/*.py"
       - .github/workflows/e2e_sft.yml
       - "tests/e2e/*.sh"
 
-
+# Declare permissions just read content.
+permissions: 
+  contents: read
 
 jobs:
   e2e_sft:
     runs-on: [self-hosted, l20-1]
+    timeout-minutes: 5 # Increase this timeout value as needed
     env:
       HTTP_PROXY: ${{ secrets.PROXY_HTTP }}
       HTTPS_PROXY: ${{ secrets.PROXY_HTTPS }}
@@ -37,7 +42,7 @@ jobs:
       - name: Install the current repository
         run: |
           pip3 install hf_transfer
-          pip3 install -e .[test]
+          pip3 install -e .[test,gpu]
       - name: Prepare gsm8k dataset
         run: |
           ray stop --force
@@ -54,3 +59,8 @@ jobs:
         run: |
           ray stop --force
           bash tests/sft/run_sft_sp_loss_match.sh
+      - name: Running gsm8k e2e training tests on 8 L20 GPUs with sequence parallism and liger
+        run: |
+          ray stop --force
+          bash tests/sft/run_sft_qwen05_sp2_liger.sh 8 $HOME/ckpts/
+          rm -rf $HOME/ckpts/
